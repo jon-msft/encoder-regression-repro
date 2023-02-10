@@ -1,5 +1,3 @@
-// TODO some funny clever and informative intro text
-
 const recordButton = document.querySelector("#record");
 const stopButton = document.querySelector("#stop");
 
