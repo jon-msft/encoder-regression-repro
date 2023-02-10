@@ -20,8 +20,9 @@ const hdConstraints = { video: { width: 1280, height: 720 } };
 
 let constraints = hdConstraints; // TODO additional constraints to add to repro?
 
-const videoCodec = "avc1.4D002A"; // main profile, level 4.2
-videoBps = 4000000; // TODO check this
+// const videoCodec = "avc1.4D002A"; // main profile, level 4.2
+const videoCodec = "avc1.4d0028"; // main profile, level 4.0
+videoBps = 3000000; 
 
 const webmCodecId = "MPEG4/ISO/AVC"; // 'V_MPEG4/ISO/AVC';
 
