@@ -6,6 +6,7 @@ const stopButton = document.querySelector("#stop");
 const qvgaConstraints = { video: { width: 320, height: 240 } };
 const vgaConstraints = { video: { width: 640, height: 480 } };
 const hdConstraints = { video: { width: 1280, height: 720 } };
+// Below constraints won't work yet since we read constraints.video.width and height directly
 // const fullHdConstraints = {
 //   video: { width: { min: 1920 }, height: { min: 1080 } },
 // };
@@ -51,9 +52,11 @@ async function onRecordingReady(e) {
 
   const videoFrames = await demux(e.data);
   const reEncodedFrames = await reEncode(videoFrames);
-  console.log(reEncodedFrames);
-  const muxedResult = await mux(reEncodedFrames);
-  console.log(muxedResult);
+  const reEncodedVideoBlob = await mux(reEncodedFrames);
+
+  const encodedVideoElement = document.getElementById('encodedVideo');
+  const encodedVideoURL = URL.createObjectURL(reEncodedVideoBlob);
+  encodedVideoElement.src = encodedVideoURL;
 }
 
 function stop() {
@@ -82,7 +85,6 @@ async function demux(webmBlob) {
   let timestampOffset = 0;
   let lastTimestamp = 0;
   while ((part = mkvDemuxer.demux()) !== null) {
-    console.log(part);
 
     if (part.frames) {
       part.frames.forEach((f) => {
@@ -98,42 +100,22 @@ async function demux(webmBlob) {
       }); // { data, track, timestamp }
     }
   }
-  console.log(videoFrames);
 
   return videoFrames;
 }
 
-async function mux(frames) {
-  // TODO find better way than save file picker
-  const fileHandle = await window.showSaveFilePicker({
-    startIn: "videos",
-    suggestedName: "myVideo.webm",
-    types: [
-      {
-        description: "Video File",
-        accept: { "video/webm": [".webm"] },
-      },
-    ],
-  });
-
-  const fileWritableStream = await fileHandle.createWritable();
-
-
+async function mux(encodedVideoChunks) {
   const webmWriter = new WebMWriter({
-    fileWriter: fileWritableStream,
     codec: webmCodecId,
     width: constraints.video.width,
     height: constraints.video.width,
   });
 
-  for (const frame of frames) {
-    webmWriter.addFrame(frame);  // Takes EncodedVideoChunk
+  for (const frame of encodedVideoChunks) {
+    webmWriter.addFrame(frame);
   }
 
-  await webmWriter.complete();
-  fileWritableStream.close();
-  const file = await fileHandle.getFile();
-  return file;
+  return await webmWriter.complete();
 }
 
 async function reEncode(frames) {
@@ -144,7 +126,6 @@ async function reEncode(frames) {
   const encoder = createVideoEncoder(onEncoderOutput);
 
   onDecoderOutput = (frame) => {
-    console.log(frame);
     encoder.encode(frame); // TODO handle keyframes videoEncoder.encode(frame, { keyFrame: true });
     frame.close();
   }
@@ -153,7 +134,6 @@ async function reEncode(frames) {
     const videochunk = new EncodedVideoChunk({
       type: frame.keyFrame ? 'key' : 'delta',
       data: frame.data,
-      // duration: undefined,
       timestamp: frame.timestamp * 1000000,
     });
     decoder.decode(videochunk);
@@ -172,16 +152,10 @@ function createVideoEncoder(onOutput) {
 
   videoEncoder.configure({
     codec: videoCodec,
-    // displayHeight: height,
-    // displayWidth: width,
-    // codedHeight: constraints.height,
-    // codedWidth: constraints.width,
     height: constraints.video.height,
     width: constraints.video.width,
-    // height,
-    // width,
     bitrate: videoBps,
-    framerate: 30, // TODO remove?
+    framerate: 30,
     latencyMode: 'quality',
     // scalabilityMode: 'L1T3', // TODO play with this?
     avc: {

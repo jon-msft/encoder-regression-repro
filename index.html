@@ -33,23 +33,24 @@
         <!-- This is the start of content for our page -->
         <h1 class="title">MediaRecorder & WebCodecs decode/encode test</h1>
 
-
         <button id="record">Record</button>
         <button id="stop">Stop</button>
 
         <figure>
-          <video height="50%" id="inputVideo" autoplay muted></video>
-          <br />
-          Live preview
+          Live preview<br />
+          <video height="50%" id="inputVideo" autoplay muted controls></video>
+          
         </figure>
 
         <figure>
-          <video height="50%" id="recording" autoplay muted></video>
-          <br />
-          Recorded video
+          Recorded video <br />
+          <video height="50%" id="recording" autoplay muted controls></video>
         </figure>
 
-        <br />
+        <figure>
+          Re-encoded video <br />
+          <video height="50%" id="encodedVideo" autoplay muted controls></video>
+        </figure>
 
       </div>
     </div>
