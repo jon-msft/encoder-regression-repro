@@ -1,4 +1,4 @@
-console.log("hello world");
+// TODO some funny clever and informative intro text
 
 const recordButton = document.querySelector("#record");
 const stopButton = document.querySelector("#stop");
@@ -52,8 +52,8 @@ async function onRecordingReady(e) {
   const videoFrames = await demux(e.data);
   const reEncodedFrames = await reEncode(videoFrames);
   console.log(reEncodedFrames);
-  // TODO mux
-  // const muxedResult = mux(videoFrames);
+  const muxedResult = await mux(reEncodedFrames);
+  console.log(muxedResult);
 }
 
 function stop() {
@@ -126,22 +126,26 @@ async function mux(frames) {
     height: constraints.video.width,
   });
 
-    // TODO
-  // for (const frame of frames) {
-  //   webmWriter.addFrame(frames);  // Takes EncodedVideoChunk
-  // }
+  for (const frame of frames) {
+    webmWriter.addFrame(frame);  // Takes EncodedVideoChunk
+  }
 
-
-  //const file = await fileHandle.getFile();
+  await webmWriter.complete();
+  fileWritableStream.close();
+  const file = await fileHandle.getFile();
+  return file;
 }
 
 async function reEncode(frames) {
-  // TODO
-  // const encoder = createVideoEncoder
+  let encodedChunks = [];
+  onEncoderOutput = (chunk) => {
+    encodedChunks.push(chunk);
+  }
+  const encoder = createVideoEncoder(onEncoderOutput);
 
   onDecoderOutput = (frame) => {
     console.log(frame);
-    // decodedFrames.push(frame); // TODO pass to encoder
+    encoder.encode(frame); // TODO handle keyframes videoEncoder.encode(frame, { keyFrame: true });
     frame.close();
   }
   const decoder = createVideoDecoder(onDecoderOutput);
@@ -156,39 +160,36 @@ async function reEncode(frames) {
   }
   await decoder.flush();
   await decoder.close();
+
+  return encodedChunks;
 }
 
 function createVideoEncoder(onOutput) {
-  // TODO
-  // const videoEncoder = new VideoEncoder({
-  //   output: onOutput,
-  //   error: (error: Error) => onError({ reason: 'Video Encoding Error', error }),
-  // });
+  const videoEncoder = new VideoEncoder({
+    output: onOutput,
+    error: console.error
+  });
 
-  // const width =
-  //   this.video.processingTasks && this.video.processingTasks.length > 0 ? this.video.processingTasks[0].width : 1280;
-  // const height =
-  //   this.video.processingTasks && this.video.processingTasks.length > 0 ? this.video.processingTasks[0].height : 720;
-  // // Fallback of 1280x720 does not preserve aspect ratio, but it seems like there should always be processingTasks of length 1, so we should never hit that case
-  // videoEncoder.configure({
-  //   codec: this.video.config.videoCodec,
-  //   // displayHeight: height,
-  //   // displayWidth: width,
-  //   codedHeight: height,
-  //   codedWidth: width,
-  //   height,
-  //   width,
-  //   bitrate: this.video.config.videoBitrate ? this.video.config.videoBitrate : undefined,
-  //   framerate: 30,
-  //   latencyMode: 'quality',
-  //   scalabilityMode: 'L1T2',
-  //   avc: {
-  //     format: 'annexb',
-  //   },
-  // });
+  videoEncoder.configure({
+    codec: videoCodec,
+    // displayHeight: height,
+    // displayWidth: width,
+    // codedHeight: constraints.height,
+    // codedWidth: constraints.width,
+    height: constraints.video.height,
+    width: constraints.video.width,
+    // height,
+    // width,
+    bitrate: videoBps,
+    framerate: 30, // TODO remove?
+    latencyMode: 'quality',
+    // scalabilityMode: 'L1T3', // TODO play with this?
+    avc: {
+      format: 'annexb',
+    },
+  });
 
-  // // eslint-disable-next-line consistent-return
-  // return videoEncoder;
+  return videoEncoder;
 }
 
 function createVideoDecoder(onOutput) {
